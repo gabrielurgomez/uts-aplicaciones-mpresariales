@@ -5,7 +5,7 @@ const pool = createPool({
     host: DB_HOST,
     user: DB_USER,
     password: DB_PASSWORD,
-    port: parseInt(DB_PORT), // para que typescript lo lea como un numero
+    port: parseInt(DB_PORT),
     database: DB_DATABASE
 })
 

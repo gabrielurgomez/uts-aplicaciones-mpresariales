@@ -1,5 +1,5 @@
 export interface Estudiante {
     numeroDocumento: number;
     nombre: string;
-    telefono: number;
+    telefono: number | null;
 }
