@@ -1,16 +1,27 @@
 import { Request, Response } from 'express';
-import { pool } from '../db';
-import { Estudiante } from '../interfaces';
+import { prisma } from "../libs/prisma"
+import { estudiantes } from '@prisma/client';
+import ExcelJS from 'exceljs';
 
-let sqlCrearEstudiante = 'INSERT INTO estudiantes (numeroDocumento, nombre, telefono) VALUES (?, ?, ?)'
-let sqlConsultarEstudiantes = 'SELECT * FROM estudiantes'
 export const consultarEstudiantes = async (req: Request, res: Response) => {
     try {
-        const { numeroDocumento, nombre, telefono } = req.body
 
-        let rta: any = await pool.query(sqlConsultarEstudiantes, []);
-        let estudiantes = rta[0];
+        let estudiantes: estudiantes[] = await prisma.estudiantes.findMany({
+            include: {
+                curso: true,
+            }
+        })
         if (estudiantes.length > 0) {
+            let datos = [["NUM DOC", "NOMBRE", "EDAD", "CURSO"]];
+            estudiantes.forEach(estudiante => {
+                datos.push([estudiante.numeroDocumento, estudiante.nombre, estudiante.edad, (estudiante as any).curso.nombre])
+            })
+            //console.log(datos);
+            let nombreArchivo = "estudiantes.xlsx";
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('Estudiantes', { properties: { tabColor: { argb: 'FFC0000' } } });
+            sheet.addRows(datos);
+            await workbook.xlsx.writeFile(nombreArchivo);
             return res.status(200).json(estudiantes);
         } else {
             return res.status(204).json();
@@ -26,11 +37,16 @@ export const crearEstudiante = async (req: Request, res: Response) => {
     console.log(req.body);
     const { numeroDocumento, nombre, telefono } = req.body;
     try {
-        let [rta]: any = await pool.query(sqlCrearEstudiante, [numeroDocumento, nombre, telefono])
-        console.log(rta)
-        if (rta.affectedRows > 0) {
-            return res.status(200).json({ message: 'Estudiante creado correctamente' })
-        }
+        //se crea el estudiante con prisma
+        let rta = await prisma.estudiantes.create({
+            data: {
+                numeroDocumento: numeroDocumento,
+                nombre: nombre,
+                telefono: telefono,
+                idCurso: 1
+            }
+        })
+        console.log(rta);
     } catch (error: unknown) {
         if (error instanceof Error && 'code' in error && 'sqlMessage' in error) {
             if (error.code == "ER_DUP_ENTRY") {
